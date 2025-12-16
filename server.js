@@ -28,7 +28,7 @@ app.post("/create-payment", async (req, res) => {
 
     // 1️⃣ Generate token
     const tokenRes = await fetch(
-      "https://api.phonepe.com/apis/identity-manager/v1/oauth/token",
+      "https://api.phonepe.com/v1/oauth/token",
       {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -92,6 +92,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
 
 
 
