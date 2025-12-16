@@ -66,7 +66,19 @@ app.post("/create-payment", async (req, res) => {
     );
 
     const payData = await payRes.json();
-    res.json(payData);
+   const redirectUrl =
+  payData?.data?.instrumentResponse?.redirectInfo?.url;
+
+if (!redirectUrl) {
+  return res.status(400).json(payData);
+}
+
+res.json({
+  success: true,
+  data: {
+    redirectUrl
+  }
+});
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -77,4 +89,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
 
