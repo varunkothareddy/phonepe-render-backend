@@ -38,21 +38,28 @@ app.post("/pay", async (req, res) => {
     const checksum =
       crypto
         .createHash("sha256")
-        .update(base64Payload + "/pg/v1/pay" + PHONEPE_CONFIG.SALT_KEY)
+        .update(
+          base64Payload +
+          "/pg/v1/pay" +
+          PHONEPE_CONFIG.SALT_KEY
+        )
         .digest("hex") +
       "###" +
       PHONEPE_CONFIG.SALT_INDEX;
 
-    const response = await fetch(PHONEPE_CONFIG.PAY_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum
-      },
-      body: JSON.stringify({
-        request: base64Payload
-      })
-    });
+    const response = await fetch(
+      PHONEPE_CONFIG.PAY_API_URL,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-VERIFY": checksum
+        },
+        body: JSON.stringify({
+          request: base64Payload
+        })
+      }
+    );
 
     const data = await response.json();
 
@@ -72,6 +79,7 @@ app.post("/pay", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+;
 
 /* -------- CALLBACK (OPTIONAL) -------- */
 app.post("/callback", (req, res) => {
@@ -83,3 +91,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log("Server running on port", PORT)
 );
+
