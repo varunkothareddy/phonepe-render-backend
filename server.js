@@ -25,19 +25,23 @@ app.post("/create-payment", async (req, res) => {
     }
 
     /* ---------- 1. GENERATE ACCESS TOKEN ---------- */
-    const tokenRes = await fetch("https://api.phonepe.com/v1/oauth/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json"
-      },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: PHONEPE_CLIENT_ID,
-        client_secret: PHONEPE_CLIENT_SECRET,
-        client_version: PHONEPE_CLIENT_VERSION
-      })
-    });
+    const tokenRes = await fetch(
+  "https://mercury.phonepe.com/v1/oauth/token",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json"
+    },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: PHONEPE_CLIENT_ID,
+      client_secret: PHONEPE_CLIENT_SECRET,
+      client_version: PHONEPE_CLIENT_VERSION
+    })
+  }
+);
+
 
     const tokenText = await tokenRes.text();
     let tokenData;
@@ -113,3 +117,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
