@@ -49,7 +49,7 @@ app.post("/create-payment", async (req, res) => {
 
     // 2️⃣ Create payment
     const payRes = await fetch(
-      "https://api.phonepe.com/apis/pg/checkout/v1/create",
+      "https://api.phonepe.com/checkout/v2/pay",
       {
         method: "POST",
         headers: {
@@ -77,3 +77,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
