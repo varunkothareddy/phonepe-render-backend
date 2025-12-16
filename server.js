@@ -39,7 +39,17 @@ app.post("/create-payment", async (req, res) => {
       })
     });
 
-    const tokenData = await tokenRes.json();
+    const tokenText = await tokenRes.text();
+    let tokenData;
+
+    try {
+      tokenData = JSON.parse(tokenText);
+    } catch {
+      return res.status(500).json({
+        error: "Token API returned non-JSON",
+        raw: tokenText
+      });
+    }
 
     if (!tokenData.access_token) {
       return res.status(400).json(tokenData);
@@ -47,52 +57,57 @@ app.post("/create-payment", async (req, res) => {
 
     /* ===== 2. CREATE CHECKOUT v2 PAYMENT ===== */
     const payRes = await fetch(
-  "https://api.phonepe.com/apis/pg/checkout/v2/pay",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      "Authorization": `O-Bearer ${tokenData.access_token}`
-    },
-    body: JSON.stringify({
-      merchantOrderId: orderId,
-      amount: amount * 100,
-      paymentFlow: {
-        type: "PG_CHECKOUT",
-        merchantUrls: {
-          redirectUrl: "https://attmia.com/payment-status.html"
-        }
+      "https://api.phonepe.com/apis/pg/checkout/v2/pay",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `O-Bearer ${tokenData.access_token}`
+        },
+        body: JSON.stringify({
+          merchantOrderId: orderId,
+          amount: amount * 100,
+          paymentFlow: {
+            type: "PG_CHECKOUT",
+            merchantUrls: {
+              redirectUrl: "https://attmia.com/payment-status.html"
+            }
+          }
+        })
       }
-    })
+    );
+
+    const payText = await payRes.text();
+    let payData;
+
+    try {
+      payData = JSON.parse(payText);
+    } catch {
+      return res.status(500).json({
+        error: "PhonePe checkout API returned non-JSON",
+        raw: payText
+      });
+    }
+
+    if (!payData.redirectUrl) {
+      return res.status(400).json(payData);
+    }
+
+    return res.json({
+      success: true,
+      redirectUrl: payData.redirectUrl
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || "Internal server error"
+    });
   }
-);
-
-const payText = await payRes.text();
-let payData;
-
-try {
-  payData = JSON.parse(payText);
-} catch {
-  return res.status(500).json({
-    error: "PhonePe checkout API returned non-JSON",
-    raw: payText
-  });
-}
-
-if (!payData.redirectUrl) {
-  return res.status(400).json(payData);
-}
-
-res.json({
-  success: true,
-  redirectUrl: payData.redirectUrl
 });
-
 
 /* ---------- START SERVER ---------- */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
-
