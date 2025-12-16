@@ -1,11 +1,40 @@
 import express from "express";
-
-import Razorpay from "razorpay";
-import crypto from "crypto";
+import fetch from "node-fetch";
 
 const app = express();
 
+// 🔥 FULL CORS HANDLING (FINAL)
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "https://attmia.com",
+    "https://www.attmia.com"
+  ];
+
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  // ✅ VERY IMPORTANT: handle preflight
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
 app.use(express.json());
+
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -60,4 +89,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
 
