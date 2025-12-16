@@ -1,94 +1,62 @@
 import express from "express";
-import crypto from "crypto";
-import fetch from "node-fetch";
 import cors from "cors";
-import { PHONEPE_CONFIG } from "./config.js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Legacy PhonePe backend running");
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-/* -------- CREATE PAYMENT -------- */
-app.post("/pay", async (req, res) => {
+/* ---------- HEALTH CHECK ---------- */
+app.get("/", (req, res) => {
+  res.send("Razorpay backend running");
+});
+
+/* ---------- CREATE ORDER ---------- */
+app.post("/create-order", async (req, res) => {
   try {
-    const { amount, orderId, mobile } = req.body;
+    const { amount } = req.body;
 
-    const payload = {
-      merchantId: PHONEPE_CONFIG.MERCHANT_ID,
-      merchantTransactionId: orderId,
-      merchantUserId: "USER_" + Date.now(),
-      amount: amount * 100,
-      redirectUrl: PHONEPE_CONFIG.REDIRECT_URL,
-      redirectMode: "POST",
-      callbackUrl: PHONEPE_CONFIG.CALLBACK_URL,
-      mobileNumber: mobile || "9999999999",
-      paymentInstrument: {
-        type: "PAY_PAGE"
-      }
-    };
+    const order = await razorpay.orders.create({
+      amount: amount * 100, // paisa
+      currency: "INR",
+      receipt: "rcpt_" + Date.now()
+    });
 
-    const base64Payload = Buffer.from(
-      JSON.stringify(payload)
-    ).toString("base64");
-
-    const checksum =
-      crypto
-        .createHash("sha256")
-        .update(
-          base64Payload +
-          "/pg/v1/pay" +
-          PHONEPE_CONFIG.SALT_KEY
-        )
-        .digest("hex") +
-      "###" +
-      PHONEPE_CONFIG.SALT_INDEX;
-
-    const response = await fetch(
-      PHONEPE_CONFIG.PAY_API_URL,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-VERIFY": checksum
-        },
-        body: JSON.stringify({
-          request: base64Payload
-        })
-      }
-    );
-
-    const data = await response.json();
-
-    if (
-      data?.data?.instrumentResponse?.redirectInfo?.url
-    ) {
-      return res.json({
-        success: true,
-        redirectUrl:
-          data.data.instrumentResponse.redirectInfo.url
-      });
-    }
-
-    return res.status(400).json(data);
-
+    res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-;
 
-/* -------- CALLBACK (OPTIONAL) -------- */
-app.post("/callback", (req, res) => {
-  console.log("PhonePe callback:", req.body);
-  res.status(200).send("OK");
+/* ---------- VERIFY PAYMENT ---------- */
+app.post("/verify", (req, res) => {
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature
+  } = req.body;
+
+  const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+    .update(body)
+    .digest("hex");
+
+  if (expectedSignature === razorpay_signature) {
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ success: false });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
-  console.log("Server running on port", PORT)
-);
-
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
