@@ -56,12 +56,15 @@ app.post("/create-payment", async (req, res) => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${tokenData.access_token}`
         },
-        body: JSON.stringify({
-          merchantId: PHONEPE_CLIENT_ID,
-          merchantOrderId: orderId,
-          amount: amount * 100,
-          redirectUrl: "https://attmia.com/payment-status.html"
-        })
+       body: JSON.stringify({
+  merchantId: PHONEPE_CLIENT_ID,
+  merchantOrderId: orderId,
+  amount: amount * 100,
+  redirectUrl: "https://attmia.com/payment-status.html",
+  paymentInstrument: {
+    type: "PAY_PAGE"
+  }
+})
       }
     );
 
@@ -89,5 +92,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
 
 
