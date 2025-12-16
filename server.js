@@ -56,7 +56,7 @@ app.post("/create-payment", async (req, res) => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${tokenData.access_token}`
         },
-       body: JSON.stringify({
+      body: JSON.stringify({
   merchantId: PHONEPE_CLIENT_ID,
   merchantOrderId: orderId,
   amount: amount * 100,
@@ -68,7 +68,29 @@ app.post("/create-payment", async (req, res) => {
       }
     );
 
-    const payData = await payRes.json();
+    const tokenText = await tokenRes.text();
+let tokenData;
+
+try {
+  tokenData = JSON.parse(tokenText);
+} catch {
+  return res.status(500).json({
+    error: "Token API returned non-JSON response",
+    raw: tokenText
+  });
+}
+
+
+let payData;
+try {
+  payData = JSON.parse(rawText);
+} catch {
+  return res.status(500).json({
+    error: "PhonePe returned non-JSON response",
+    raw: rawText
+  });
+}
+
    const redirectUrl =
   payData?.data?.instrumentResponse?.redirectInfo?.url;
 
@@ -92,6 +114,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
 
 
 
