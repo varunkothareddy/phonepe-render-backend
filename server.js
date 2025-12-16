@@ -10,12 +10,12 @@ const PHONEPE_CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
 const PHONEPE_CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
 const PHONEPE_CLIENT_VERSION = process.env.PHONEPE_CLIENT_VERSION || "1";
 
-// Health check
+/* ================= HEALTH CHECK ================= */
 app.get("/", (req, res) => {
   res.send("PhonePe backend running");
 });
 
-// Create payment
+/* ================= CREATE PAYMENT ================= */
 app.post("/create-payment", async (req, res) => {
   try {
     const { orderId, amount } = req.body;
@@ -24,10 +24,13 @@ app.post("/create-payment", async (req, res) => {
       return res.status(400).json({ error: "Missing orderId or amount" });
     }
 
-    /* ===== 1. Generate token ===== */
+    /* ---------- 1. GENERATE ACCESS TOKEN ---------- */
     const tokenRes = await fetch("https://api.phonepe.com/v1/oauth/token", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+      },
       body: new URLSearchParams({
         grant_type: "client_credentials",
         client_id: PHONEPE_CLIENT_ID,
@@ -36,17 +39,28 @@ app.post("/create-payment", async (req, res) => {
       })
     });
 
-    const tokenData = await tokenRes.json();
+    const tokenText = await tokenRes.text();
+    let tokenData;
+
+    try {
+      tokenData = JSON.parse(tokenText);
+    } catch {
+      return res.status(500).json({
+        error: "Token API returned non-JSON response",
+        raw: tokenText
+      });
+    }
 
     if (!tokenData.access_token) {
       return res.status(400).json(tokenData);
     }
 
-    /* ===== 2. Create payment (v2) ===== */
+    /* ---------- 2. CREATE PAYMENT (V2) ---------- */
     const payRes = await fetch("https://api.phonepe.com/checkout/v2/pay", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
         "Authorization": `Bearer ${tokenData.access_token}`
       },
       body: JSON.stringify({
@@ -60,7 +74,17 @@ app.post("/create-payment", async (req, res) => {
       })
     });
 
-    const payData = await payRes.json();
+    const payText = await payRes.text();
+    let payData;
+
+    try {
+      payData = JSON.parse(payText);
+    } catch {
+      return res.status(500).json({
+        error: "PhonePe payment API returned non-JSON",
+        raw: payText
+      });
+    }
 
     const redirectUrl =
       payData?.data?.instrumentResponse?.redirectInfo?.url;
@@ -69,9 +93,12 @@ app.post("/create-payment", async (req, res) => {
       return res.status(400).json(payData);
     }
 
+    /* ---------- SUCCESS RESPONSE ---------- */
     return res.json({
       success: true,
-      data: { redirectUrl }
+      data: {
+        redirectUrl
+      }
     });
 
   } catch (err) {
@@ -81,6 +108,7 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
+/* ================= START SERVER ================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
